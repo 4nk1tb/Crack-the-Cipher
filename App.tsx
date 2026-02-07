@@ -259,7 +259,8 @@ export default function App() {
       `}</style>
 
       {/* --- Header --- */}
-      <header className="flex-none h-14 sm:h-16 px-5 flex justify-between items-center z-20 border-b border-transparent">
+      {/* ADDED: pt-[env(safe-area-inset-top)] and h-auto to handle the iOS Notch Area */}
+      <header className="flex-none h-auto pt-[max(env(safe-area-inset-top),1.5rem)] pb-3 px-5 flex justify-between items-center z-20 border-b border-transparent">
         <div className="flex items-center gap-2.5 cursor-pointer" onClick={resetGame}>
           <div className="w-8 h-8 bg-zinc-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-zinc-900 shadow-sm">
             <Brain size={18} strokeWidth={3} />
