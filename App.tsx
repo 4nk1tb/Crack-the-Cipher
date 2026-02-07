@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Brain, Delete, Sun, Moon, RotateCcw, Users, User, ArrowRight, Lock, ShieldCheck, Check } from 'lucide-react';
+import { Trophy, Brain, Delete, Sun, Moon, RotateCcw, Users, User, ArrowRight, Lock, ShieldCheck, Check, Lightbulb } from 'lucide-react';
 
 // --- Types & Constants ---
 type GameMode = 'solo' | 'multiplayer';
@@ -9,6 +9,7 @@ interface Guess {
   code: string;
   bulls: number;
   cows: number;
+  isRevealed?: boolean; // New property for the hint feature
 }
 
 const MAX_ATTEMPTS = 10;
@@ -74,6 +75,7 @@ export default function App() {
   const [currentInput, setCurrentInput] = useState<string>('');
   const [guesses, setGuesses] = useState<Guess[]>([]);
   const [shakeInput, setShakeInput] = useState(false);
+  const [hintAvailable, setHintAvailable] = useState(true);
   
   const historyRef = useRef<HTMLDivElement>(null);
 
@@ -160,7 +162,7 @@ export default function App() {
 
     // 2. PLAYING MODE (Player 2 guesses)
     const { bulls, cows } = calculateFeedback(secretCode, currentInput);
-    const newGuess: Guess = { code: currentInput, bulls, cows };
+    const newGuess: Guess = { code: currentInput, bulls, cows, isRevealed: false };
     const newGuesses = [...guesses, newGuess];
     
     setGuesses(newGuesses);
@@ -173,10 +175,23 @@ export default function App() {
     }
   };
 
+  const useHint = () => {
+    if (!hintAvailable || guesses.length === 0) return;
+    
+    // Create a copy of guesses
+    const updatedGuesses = [...guesses];
+    // Mark the last guess as revealed
+    updatedGuesses[updatedGuesses.length - 1].isRevealed = true;
+    
+    setGuesses(updatedGuesses);
+    setHintAvailable(false);
+  };
+
   const startGame = (mode: GameMode) => {
     setGuesses([]);
     setCurrentInput('');
     setSecretCode('');
+    setHintAvailable(true);
     
     if (mode === 'solo') {
       setSecretCode(generateSecretCode());
@@ -191,6 +206,7 @@ export default function App() {
     setGuesses([]);
     setCurrentInput('');
     setSecretCode('');
+    setHintAvailable(true);
   };
 
   // --- Sub-Components ---
@@ -360,9 +376,31 @@ export default function App() {
                       <span className="text-[10px] font-mono text-zinc-300 dark:text-zinc-600 font-bold w-4">
                         {(idx + 1).toString().padStart(2, '0')}
                       </span>
-                      <span className="font-mono text-lg font-bold tracking-[0.2em] text-zinc-700 dark:text-zinc-300">
-                        {g.code}
-                      </span>
+                      {/* --- DIGIT RENDERING LOGIC --- */}
+                      <div className="flex gap-2">
+                        {g.code.split('').map((digit, dIdx) => {
+                          let colorClass = "text-zinc-700 dark:text-zinc-300"; // Default
+                          
+                          if (g.isRevealed) {
+                            if (digit === secretCode[dIdx]) {
+                              // Bull (Exact)
+                              colorClass = "text-emerald-500 font-black drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]";
+                            } else if (secretCode.includes(digit)) {
+                              // Cow (Wrong pos)
+                              colorClass = "text-amber-400 font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]";
+                            } else {
+                              // Miss
+                              colorClass = "text-zinc-300 dark:text-zinc-700 opacity-30";
+                            }
+                          }
+
+                          return (
+                            <span key={dIdx} className={`font-mono text-lg font-bold tracking-widest transition-colors duration-500 ${colorClass}`}>
+                              {digit}
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
                     <FeedbackDisplay bulls={g.bulls} cows={g.cows} />
                  </div>
@@ -373,8 +411,23 @@ export default function App() {
             <div className="flex-none bg-zinc-50/95 dark:bg-zinc-950/95 backdrop-blur-md pt-3 border-t border-zinc-100 dark:border-zinc-900 z-10 rounded-t-3xl shadow-[0_-5px_30px_rgba(0,0,0,0.02)]">
               {!(gameStatus === 'won' || gameStatus === 'lost') ? (
                 <>
-                  <div className="flex justify-between px-8 mb-1 items-end">
+                  <div className="flex justify-between px-8 mb-1 items-end h-8">
                     <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Attempt {guesses.length + 1}/{MAX_ATTEMPTS}</span>
+                    
+                    {/* HINT BUTTON */}
+                    {guesses.length > 0 && (
+                      <button 
+                        onClick={useHint} 
+                        disabled={!hintAvailable}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all
+                          ${hintAvailable 
+                            ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 hover:scale-105 active:scale-95' 
+                            : 'bg-zinc-100 text-zinc-300 dark:bg-zinc-800 dark:text-zinc-600 cursor-not-allowed'}`}
+                      >
+                        <Lightbulb size={12} strokeWidth={3} className={hintAvailable ? "fill-amber-500 text-amber-500" : ""} />
+                        {hintAvailable ? "Hint (1)" : "Used"}
+                      </button>
+                    )}
                   </div>
                   <InputDisplay value={currentInput} status={gameStatus} shake={shakeInput} />
                   <Keypad />
