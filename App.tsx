@@ -68,7 +68,18 @@ const InputDisplay = ({ value, status, shake }: { value: string, status: GameSta
 
 export default function App() {
   // --- State ---
-  const [darkMode, setDarkMode] = useState(false);
+  // Initialize dark mode from LocalStorage or System Preference
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('smashCodeTheme');
+      if (savedTheme) {
+        return savedTheme === 'dark';
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
   const [gameStatus, setGameStatus] = useState<GameStatus>('menu');
   
   const [secretCode, setSecretCode] = useState<string>('');
@@ -80,15 +91,23 @@ export default function App() {
   const historyRef = useRef<HTMLDivElement>(null);
 
   // --- Effects ---
+  
+  // Handle Theme Changes (DOM & Persistence)
   useEffect(() => {
-    // Default to dark mode if system prefers, or simple logic
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDarkMode(true);
+    const root = document.documentElement;
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    
+    if (darkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('smashCodeTheme', 'dark');
+      // Update mobile browser status bar
+      if (metaThemeColor) metaThemeColor.setAttribute('content', '#09090b');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('smashCodeTheme', 'light');
+      // Update mobile browser status bar
+      if (metaThemeColor) metaThemeColor.setAttribute('content', '#fafafa');
     }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
   useEffect(() => {
